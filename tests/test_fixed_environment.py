@@ -6,8 +6,8 @@ from gymnasium import Env, make
 from treasure_hunt.environment import FixedTreasureHuntEnv
 
 
-@pytest.fixture
-def env():
+@pytest.fixture(name='env')
+def env_fixture():
     """Fixture to initialize the environment before each test."""
     env = make("FixedTreasureHunt-v0")
     env.reset(seed=47)
@@ -33,7 +33,7 @@ def test_initialization(env: Env):
 def test_invalid_move_penalty(env: Env):
     """Test that invalid moves (out of bounds) return the correct penalty."""
     # Test moving out of bounds (hero at position 0, try to move up)
-    obs, reward, done, _, _ = env.step(0)  # action 0: up
+    _obs, reward, done, _, _ = env.step(0)  # action 0: up
     assert reward == env.INVALID_MOVE_PENALTY
     assert not done
 
@@ -81,8 +81,7 @@ def test_valid_moves(env: Env):
 
 def test_episode_reset(env: Env):
     """Test that the environment can be reset."""
-    env.reset()
-    obs = env._get_obs()
+    obs, _ = env.reset()
     assert obs["hero_position"] == env.FIXED_LAYOUT["hero_position"]
     assert obs["treasure_position"] == env.FIXED_LAYOUT["treasure_position"]
     assert obs["monster_positions"] == env.FIXED_LAYOUT["monster_positions"]
