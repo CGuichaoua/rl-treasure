@@ -22,11 +22,12 @@ class TabularQLearner:
         self.exploration_decay = exploration_decay
         self.min_exploration_rate = min_exploration_rate
 
-        self.q_table = defaultdict(lambda: np.zeros(env.action_space.n))
+        self.q_table = defaultdict(lambda: np.zeros(
+            env.action_space.n, dtype=np.float32))
 
     def _serialize_state(self, state: dict) -> tuple:
         """Convert the observation dict into a hashable state tuple."""
-        return tuple(state.keys())
+        return tuple(state.values())
 
     def _select_action(self, state: tuple, deterministic: bool) -> int:
         """Select an action based on exploration or exploitation."""

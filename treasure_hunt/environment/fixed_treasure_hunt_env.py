@@ -10,7 +10,7 @@ class FixedTreasureHuntEnv(gym.Env):
     FIXED_LAYOUT = {
         "hero_position": 0,
         "treasure_position": 99,
-        "monster_positions": [45, 55],
+        "monster_positions": (45, 55),
     }
     INVALID_MOVE_PENALTY = -10
     TREASURE_REWARD = 200

@@ -1,2 +1,4 @@
 private_docs
 .venv
+*.pyc
+settings.json
