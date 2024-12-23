@@ -1,12 +1,13 @@
 """Tests for the TabularQLearner class."""
 from pathlib import Path
 import numpy as np
+
 from treasure_hunt.environment import FixedTreasureHuntEnv
 from treasure_hunt.agent import TabularQLearner
 
 # pylint: disable=W0212  # We're fine with using protected members in tests.
 # pylint: disable=W0611  # Unused import
-from .fixtures import fixture_environment, fixture_q_learner
+from .fixtures import fixture_environment, fixture_q_learner, fixture_q_learner_with_limit
 
 
 def test_serialize_state(q_learner: TabularQLearner):
@@ -94,10 +95,14 @@ def test_save_and_load(q_learner: TabularQLearner, tmp_path: Path):
     )
 
 # Need a trained model or an episode length limit to test evaluate
-# def test_evaluate(q_learner: TabularQLearner):
-#     """Test the evaluate method."""
-#     mean_reward, rewards = q_learner.evaluate(n_episodes=1)
 
-#     assert isinstance(mean_reward, float), "Mean reward should be a float."
-#     assert len(
-#         rewards) == 1, "Number of rewards should match the number of episodes."
+
+def test_evaluate(q_learner_with_limit: TabularQLearner):
+    """Test the evaluate method."""
+    num_episodes = 5
+    mean_reward, rewards = q_learner_with_limit.evaluate(
+        n_episodes=num_episodes)
+
+    assert isinstance(mean_reward, float), "Mean reward should be a float."
+    assert len(
+        rewards) == num_episodes, "Number of rewards should match the number of episodes."

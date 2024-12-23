@@ -105,20 +105,20 @@ class TabularQLearner:
         """
         self.train(total_timesteps)
 
-    def evaluate(self, n_episodes=10):
-        """
-        Evaluate the agent on the environment.
-        """
+    def evaluate(self, n_episodes: int = 10) -> tuple[float, list]:
+        """Evaluate the agent's performance over multiple episodes."""
         rewards = []
         for _ in range(n_episodes):
             state, _ = self.env.reset()
-            state = state['hero_position']
+            state = self._serialize_state(state)
             episode_reward = 0
             done = False
             while not done:
                 action = np.argmax(self.q_table[state])  # Greedy action
-                state, reward, done, _, _ = self.env.step(action)
-                state = state['hero_position']
+                next_state, reward, done, truncated, _ = self.env.step(action)
+                done = done or truncated
+                next_state = self._serialize_state(next_state)
+                state = next_state
                 episode_reward += reward
             rewards.append(episode_reward)
         return np.mean(rewards), rewards
