@@ -26,13 +26,13 @@ def fixture_base_environment():
 
 
 @pytest.fixture(name="q_learner")
-def fixture_q_learner(environment: FixedTreasureHuntEnv):
+def fixture_q_learner(fixed_environment: FixedTreasureHuntEnv):
     """Fixture to create the TabularQLearner."""
-    return TabularQLearner(environment)
+    return TabularQLearner(fixed_environment)
 
 
 @pytest.fixture(name="q_learner_with_limit")
-def fixture_q_learner_with_limit(environment: FixedTreasureHuntEnv):
+def fixture_q_learner_with_limit(fixed_environment: FixedTreasureHuntEnv):
     """Fixture to create the TabularQLearner with a limit."""
-    limited_env = TimeLimit(environment, max_episode_steps=500)
+    limited_env = TimeLimit(fixed_environment, max_episode_steps=500)
     return TabularQLearner(limited_env)

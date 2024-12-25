@@ -4,17 +4,20 @@ import gymnasium as gym
 from gymnasium import spaces
 from gymnasium import register
 
+from .monster_strategy import MonsterMovementStrategy, StationaryStrategy
+
 
 class BaseTreasureHuntEnv(gym.Env):
     """Basic TreasureHuntEnvironment to get started."""
-    INVALID_MOVE_PENALTY = -10
-    TREASURE_REWARD = 200
-    CAUGHT_BY_MONSTER_PENALTY = -50
-    ENV_SIZE = 10
+    INVALID_MOVE_PENALTY = -10  # Tried an invalid move
+    TREASURE_REWARD = 200  # Won the game
+    CAUGHT_BY_MONSTER_PENALTY = -50  # Lost the game
+    SLACK_PENALTY = -1  # Penalty for each step to encourage fast solves
+    ENV_SIZE = 10  # Constant for now, might change in the future
 
     metadata = {"render_modes": ["ansi"], 'render_fps': 30}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, monster_strategy: MonsterMovementStrategy = None):
         super().__init__()
 
         # Define the observation space: hero, treasure, monsters
@@ -33,6 +36,12 @@ class BaseTreasureHuntEnv(gym.Env):
         self.hero_position = None
         self.treasure_position = None
         self.monster_positions = None
+
+        if monster_strategy is not None:
+            self.monster_strategy = monster_strategy
+        else:
+            # Default is not to move the monsters
+            self.monster_strategy = StationaryStrategy()
 
         if render_mode is not None and render_mode not in self.metadata["render_modes"]:
             raise ValueError(f"Unsupported render mode {render_mode}.")
@@ -73,36 +82,12 @@ class BaseTreasureHuntEnv(gym.Env):
                 and self.treasure_position not in self.monster_positions)
 
     def step(self, action):
-        # Handle hero movement and update monster positions dynamically
-        reward, terminated, truncated = -1, False, False
+        # Takes a full turn of the hero, then the monsters
+        terminated, truncated = False, False
         info = {}
-        # Movement logic for the hero
-        row, col = self._decode_position(self.hero_position)
-        if action == 0:  # Move up
-            if row > 0:
-                row -= 1
-            else:
-                reward = self.INVALID_MOVE_PENALTY
-        elif action == 1:  # Move down
-            if row < 9:
-                row += 1
-            else:
-                reward = self.INVALID_MOVE_PENALTY
-        elif action == 2:  # Move left
-            if col > 0:
-                col -= 1
-            else:
-                reward = self.INVALID_MOVE_PENALTY
-        elif action == 3:  # Move right
-            if col < 9:
-                col += 1
-            else:
-                reward = self.INVALID_MOVE_PENALTY
-        else:
-            raise ValueError(f"Invalid action {action}.")
 
-        # Update the hero's position
-        self.hero_position = self._encode_position(row, col)
+        # Movement logic for the hero
+        reward = self._hero_move(action)
 
         # Check if the hero has found the treasure
         if self.hero_position == self.treasure_position:
@@ -115,7 +100,48 @@ class BaseTreasureHuntEnv(gym.Env):
             reward = self.CAUGHT_BY_MONSTER_PENALTY
             terminated = True  # End the episode
 
+        self._move_monsters()
+
+        # Check if the monsters caught the hero
+        if self.hero_position in self.monster_positions:
+            # Negative reward for encountering a monster
+            reward = self.CAUGHT_BY_MONSTER_PENALTY
+            terminated = True  # End the episode
+
         return self._get_obs(), reward, terminated, truncated, info
+
+    def _hero_move(self, action: int):
+        row, col = self._decode_position(self.hero_position)
+        if action == 0:  # Move up
+            row -= 1
+        elif action == 1:  # Move down
+            row += 1
+        elif action == 2:  # Move left
+            col -= 1
+        elif action == 3:  # Move right
+            col += 1
+        else:
+            raise ValueError(f"Invalid action {action}.")
+        if self._is_valid_position(row, col):
+            reward = self.SLACK_PENALTY
+            self.hero_position = self._encode_position(row, col)
+        else:
+            reward = self.INVALID_MOVE_PENALTY
+        return reward
+
+    def _move_monsters(self):
+        """Moves the monsters according to strategy."""
+        proposed_positions = self.monster_strategy.move_monsters(
+            [self._decode_position(pos) for pos in self.monster_positions],
+            self.hero_position, self.ENV_SIZE, self.np_random)
+        if self._is_valid_monster_move(proposed_positions):
+            # Move if the proposed monster positions are valid, stay otherwise
+            self.monster_positions = tuple(
+                self._encode_position(*pos) for pos in proposed_positions)
+
+    def _is_valid_position(self, row, col):
+        """Takes a proposed (decoded) position and checks if it's valid."""
+        return 0 <= row < self.ENV_SIZE and 0 <= col < self.ENV_SIZE
 
     def render(self):
         print(f"Hero position : {self._decode_position(self.hero_position)}")
@@ -143,6 +169,30 @@ class BaseTreasureHuntEnv(gym.Env):
 
     def close(self):
         pass
+
+    def _is_valid_monster_move(self, proposed_positions: list[tuple[int, int]]):
+        """
+        Check if all proposed monster positions are valid.
+        :param proposed_positions: List of new monster positions.
+        :return: True if all positions are valid, False otherwise.
+        """
+        # Ensure the correct number of positions are provided
+        if len(proposed_positions) != len(self.monster_positions):
+            return False
+
+        # Ensure positions are within bounds
+        if not all(self._is_valid_position(*pos) for pos in proposed_positions):
+            return False
+
+        # Ensure no overlap with the treasure
+        if self._decode_position(self.treasure_position) in proposed_positions:
+            return False
+
+        # Ensure no two monsters share the same position
+        if len(proposed_positions) != len(set(proposed_positions)):
+            return False
+
+        return True
 
 
 register(

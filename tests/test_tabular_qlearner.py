@@ -7,7 +7,7 @@ from treasure_hunt.agent import TabularQLearner
 
 # pylint: disable=W0212  # We're fine with using protected members in tests.
 # pylint: disable=W0611  # Unused import
-from .fixtures import fixture_environment, fixture_q_learner, fixture_q_learner_with_limit
+from .fixtures import fixture_fixed_environment, fixture_q_learner, fixture_q_learner_with_limit
 
 
 def test_serialize_state(q_learner: TabularQLearner):
@@ -67,13 +67,13 @@ def test_train(q_learner: TabularQLearner):
         non_default_states) > 0, "Training should update Q-values for encountered states."
 
 
-def test_predict(q_learner: TabularQLearner, environment: FixedTreasureHuntEnv):
+def test_predict(q_learner: TabularQLearner, fixed_environment: FixedTreasureHuntEnv):
     """Test the predict method for action selection."""
-    state, _ = environment.reset()
+    state, _ = fixed_environment.reset()
     action, _ = q_learner.predict(state, deterministic=True)
 
     assert action in range(
-        environment.action_space.n), "Predicted action should be within the valid action space."
+        fixed_environment.action_space.n), "Predicted action should be within the valid action space."
 
 
 def test_save_and_load(q_learner: TabularQLearner, tmp_path: Path):

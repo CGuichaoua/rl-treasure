@@ -3,6 +3,9 @@ import pytest
 from treasure_hunt.environment import FixedTreasureHuntEnv
 from .test_base_env import TestBaseTreasureHuntEnv
 
+# pylint: disable=W0611  # Unused import
+from .fixtures import fixture_fixed_environment, fixture_base_environment
+
 
 class TestFixedTreasureHuntEnv(TestBaseTreasureHuntEnv):
     """Tests specific to the FixedTreasureHuntEnv environment."""

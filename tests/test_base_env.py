@@ -5,6 +5,7 @@ from gymnasium.utils.env_checker import check_env
 
 from treasure_hunt.environment import BaseTreasureHuntEnv
 
+# pylint: disable=W0212  # We're fine with using protected members in tests.
 # pylint: disable=W0611 # Unused import
 from .fixtures import fixture_base_environment
 
@@ -91,3 +92,31 @@ class TestBaseTreasureHuntEnv:
         """Test that invalid action values raise an error."""
         with pytest.raises(ValueError):
             environment.step(5)  # Invalid action, not in [0, 1, 2, 3]
+
+    def test_is_valid_state(self, environment):
+        """Test the _is_valid_state method."""
+        environment.hero_position = 0
+        environment.treasure_position = 99
+        environment.monster_positions = [10, 20]
+        assert environment._is_valid_state()
+
+        environment.monster_positions = [0, 20]
+        assert not environment._is_valid_state()
+
+        environment.monster_positions = [10, 99]
+        assert not environment._is_valid_state()
+
+    def test_is_valid_position(self, environment):
+        """Test the _is_valid_position method."""
+        assert environment._is_valid_position(0, 0)
+        assert environment._is_valid_position(9, 9)
+        assert not environment._is_valid_position(-1, 0)
+        assert not environment._is_valid_position(0, 10)
+
+    def test_is_valid_monster_move(self, environment):
+        """Test the _is_valid_monster_move method."""
+        environment.treasure_position = 99
+        assert environment._is_valid_monster_move([(1, 1), (2, 2)])
+        assert not environment._is_valid_monster_move([(1, 1), (1, 1)])
+        assert not environment._is_valid_monster_move([(1, 1), (99, 99)])
+        assert not environment._is_valid_monster_move([(1, 1)])
