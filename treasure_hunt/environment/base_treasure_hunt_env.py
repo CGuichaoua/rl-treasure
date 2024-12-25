@@ -111,7 +111,7 @@ class BaseTreasureHuntEnv(gym.Env):
         return self._get_obs(), reward, terminated, truncated, info
 
     def _hero_move(self, action: int):
-        row, col = self._decode_position(self.hero_position)
+        row, col = self.decode_position(self.hero_position)
         if action == 0:  # Move up
             row -= 1
         elif action == 1:  # Move down
@@ -132,7 +132,7 @@ class BaseTreasureHuntEnv(gym.Env):
     def _move_monsters(self):
         """Moves the monsters according to strategy."""
         proposed_positions = self.monster_strategy.move_monsters(
-            [self._decode_position(pos) for pos in self.monster_positions],
+            [self.decode_position(pos) for pos in self.monster_positions],
             self.hero_position, self.ENV_SIZE, self.np_random)
         if self._is_valid_monster_move(proposed_positions):
             # Move if the proposed monster positions are valid, stay otherwise
@@ -144,11 +144,11 @@ class BaseTreasureHuntEnv(gym.Env):
         return 0 <= row < self.ENV_SIZE and 0 <= col < self.ENV_SIZE
 
     def render(self):
-        print(f"Hero position : {self._decode_position(self.hero_position)}")
+        print(f"Hero position : {self.decode_position(self.hero_position)}")
         print(f"Treasure position : {
-              self._decode_position(self.treasure_position)}")
+              self.decode_position(self.treasure_position)}")
         print(f"Monster positions : {', '.join(
-            repr(self._decode_position(pos)) for pos in self.monster_positions)}")
+            repr(self.decode_position(pos)) for pos in self.monster_positions)}")
 
     def _get_obs(self):
         """Return the current observation."""
@@ -162,7 +162,7 @@ class BaseTreasureHuntEnv(gym.Env):
         """Convert row, col to a single integer position."""
         return row * self.ENV_SIZE + col
 
-    def _decode_position(self, position: int):
+    def decode_position(self, position: int):
         """Convert single integer position to row, col."""
         row, col = divmod(position, self.ENV_SIZE)
         return row, col
@@ -185,7 +185,7 @@ class BaseTreasureHuntEnv(gym.Env):
             return False
 
         # Ensure no overlap with the treasure
-        if self._decode_position(self.treasure_position) in proposed_positions:
+        if self.decode_position(self.treasure_position) in proposed_positions:
             return False
 
         # Ensure no two monsters share the same position
