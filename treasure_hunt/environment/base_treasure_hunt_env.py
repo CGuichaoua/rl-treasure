@@ -3,6 +3,7 @@
 import gymnasium as gym
 from gymnasium import spaces
 from gymnasium import register
+import pygame
 
 from .monster_strategy import MonsterMovementStrategy, StationaryStrategy
 
@@ -15,7 +16,7 @@ class BaseTreasureHuntEnv(gym.Env):
     SLACK_PENALTY = -1  # Penalty for each step to encourage fast solves
     ENV_SIZE = 10  # Constant for now, might change in the future
 
-    metadata = {"render_modes": ["ansi"], 'render_fps': 30}
+    metadata = {"render_modes": ["ansi", "human"], 'render_fps': 5}
 
     def __init__(self, render_mode=None, monster_strategy: MonsterMovementStrategy = None):
         super().__init__()
@@ -46,6 +47,14 @@ class BaseTreasureHuntEnv(gym.Env):
         if render_mode is not None and render_mode not in self.metadata["render_modes"]:
             raise ValueError(f"Unsupported render mode {render_mode}.")
         self.render_mode = render_mode
+
+        if self.render_mode == "human":
+            pygame.init()
+            self.window_size = 600  # Size of the window
+            self.cell_size = self.window_size // self.ENV_SIZE
+            self.screen = pygame.display.set_mode(
+                (self.window_size, self.window_size))
+            pygame.display.set_caption("Treasure Hunt")
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed, options=options)
@@ -144,11 +153,37 @@ class BaseTreasureHuntEnv(gym.Env):
         return 0 <= row < self.ENV_SIZE and 0 <= col < self.ENV_SIZE
 
     def render(self):
-        print(f"Hero position : {self.decode_position(self.hero_position)}")
-        print(f"Treasure position : {
-              self.decode_position(self.treasure_position)}")
-        print(f"Monster positions : {', '.join(
-            repr(self.decode_position(pos)) for pos in self.monster_positions)}")
+        if self.render_mode == "ansi":
+            print(f"Hero position : {
+                  self.decode_position(self.hero_position)}")
+            print(f"Treasure position : {
+                  self.decode_position(self.treasure_position)}")
+            print(f"Monster positions : {', '.join(
+                repr(self.decode_position(pos)) for pos in self.monster_positions)}")
+        elif self.render_mode == "human":
+            self._render_human()
+
+    def _render_human(self):
+        self.screen.fill((255, 255, 255))  # Fill the screen with white
+
+        # Draw the hero
+        hero_row, hero_col = self.decode_position(self.hero_position)
+        pygame.draw.rect(self.screen, (0, 0, 255), (hero_col * self.cell_size,
+                         hero_row * self.cell_size, self.cell_size, self.cell_size))
+
+        # Draw the treasure
+        treasure_row, treasure_col = self.decode_position(
+            self.treasure_position)
+        pygame.draw.rect(self.screen, (255, 215, 0), (treasure_col * self.cell_size,
+                         treasure_row * self.cell_size, self.cell_size, self.cell_size))
+
+        # Draw the monsters
+        for pos in self.monster_positions:
+            monster_row, monster_col = self.decode_position(pos)
+            pygame.draw.rect(self.screen, (255, 0, 0), (monster_col * self.cell_size,
+                             monster_row * self.cell_size, self.cell_size, self.cell_size))
+
+        pygame.display.flip()
 
     def _get_obs(self):
         """Return the current observation."""
@@ -168,7 +203,8 @@ class BaseTreasureHuntEnv(gym.Env):
         return row, col
 
     def close(self):
-        pass
+        if self.render_mode == "human":
+            pygame.quit()
 
     def _is_valid_monster_move(self, proposed_positions: list[tuple[int, int]]):
         """
