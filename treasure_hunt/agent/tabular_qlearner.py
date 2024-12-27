@@ -48,7 +48,7 @@ class TabularQLearner:
         self.exploration_rate = max(self.min_exploration_rate,
                                     self.exploration_rate * self.exploration_decay)
 
-    def train(self, total_timesteps=10000):
+    def learn(self, total_timesteps=10000):
         """
         Train the agent using Q-learning.
         """
@@ -98,27 +98,3 @@ class TabularQLearner:
             q_table = np.load(f, allow_pickle=True).item()
             self.q_table = defaultdict(lambda: np.zeros(
                 self.env.action_space.n), q_table)
-
-    def learn(self, total_timesteps):
-        """
-        SB3-compatible training function.
-        """
-        self.train(total_timesteps)
-
-    def evaluate(self, n_episodes: int = 10) -> tuple[float, list]:
-        """Evaluate the agent's performance over multiple episodes."""
-        rewards = []
-        for _ in range(n_episodes):
-            state, _ = self.env.reset()
-            state = self._serialize_state(state)
-            episode_reward = 0
-            done = False
-            while not done:
-                action = np.argmax(self.q_table[state])  # Greedy action
-                next_state, reward, done, truncated, _ = self.env.step(action)
-                done = done or truncated
-                next_state = self._serialize_state(next_state)
-                state = next_state
-                episode_reward += reward
-            rewards.append(episode_reward)
-        return np.mean(rewards), rewards

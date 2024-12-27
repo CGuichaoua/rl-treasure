@@ -42,3 +42,12 @@ The Near-sighted Q-learner is slower to learn, and at around 2500 epochs, it's s
 
 Moving monsters make it harder for the oblivious agent to rush to the end as monsters cover more ground (simply from having a turn of their own). The near-sighted agent has similar results to the static case
 
+
+### Fifth iteration :
+- Random initialisation of the environment
+- 2 monsters
+- Monsters move randomly
+- **DQ-learner**
+- *Environment flattener to adapt the space to DQN*
+
+The DQN agent is much slower. 1000 epochs took 20 mn. Even then, it has limited performance.

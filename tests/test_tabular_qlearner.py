@@ -58,7 +58,7 @@ def test_update_q_value(q_learner: TabularQLearner):
 
 def test_train(q_learner: TabularQLearner):
     """Test the training process."""
-    q_learner.train(total_timesteps=10)
+    q_learner.learn(total_timesteps=10)
 
     # Ensure some Q-values have been updated
     non_default_states = [state for state in q_learner.q_table if np.any(
@@ -93,16 +93,3 @@ def test_save_and_load(q_learner: TabularQLearner, tmp_path: Path):
     assert np.array_equal(new_agent.q_table[state], q_learner.q_table[state]), (
         "Loaded Q-table does not match the saved Q-table."
     )
-
-# Need a trained model or an episode length limit to test evaluate
-
-
-def test_evaluate(q_learner_with_limit: TabularQLearner):
-    """Test the evaluate method."""
-    num_episodes = 5
-    mean_reward, rewards = q_learner_with_limit.evaluate(
-        n_episodes=num_episodes)
-
-    assert isinstance(mean_reward, float), "Mean reward should be a float."
-    assert len(
-        rewards) == num_episodes, "Number of rewards should match the number of episodes."

@@ -1,4 +1,6 @@
 """Module for the RandomMovementStrategy class."""
+from gymnasium import register
+
 from .base_strategy import MonsterMovementStrategy
 
 
@@ -23,3 +25,10 @@ class RandomMovementStrategy(MonsterMovementStrategy):
             new_row, new_col = rng.choice(valid_moves)
             proposed_positions.append((new_row, new_col))
         return proposed_positions
+
+
+register(
+    id="RandomMonsterTreasureHunt-v0",
+    entry_point="treasure_hunt.environment:BaseTreasureHuntEnv",
+    kwargs={"monster_strategy": RandomMovementStrategy()},
+)

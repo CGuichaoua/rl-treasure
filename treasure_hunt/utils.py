@@ -1,10 +1,10 @@
 """Utility functions for the treasure hunt project."""
 
-import pygame
 import os
-from datetime import datetime
 import pickle
+from datetime import datetime
 
+import pygame
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -75,7 +75,7 @@ class RLRunner:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
         # Create results directory with timestamp subfolder if it doesn't exist
-        results_dir = os.path.join('results', 'qlearner-static', timestamp)
+        results_dir = os.path.join('results', self.experiment_name, timestamp)
         os.makedirs(results_dir, exist_ok=True)
 
         # Save reward history
@@ -143,9 +143,10 @@ def run_with_render(env_human, agent, n_episodes=10):
     for episode_no in range(n_episodes):
         obs, info = env_human.reset()  # Reset the environment if the episode ends
         for _ in range(100):  # Add a limit
-            action, _ = agent.predict(obs)  # Get the action from the agent
+            # Get the action from the agent
+            action, _ = agent.predict(obs, deterministic=False)
             obs, reward, terminated, truncated, info = env_human.step(action)
             env_human.render()  # Render the environment
-            pygame.time.delay(100)  # Delay for 200 ms
+            pygame.time.delay(100)  # Delay for 100 ms
             if terminated or truncated:
                 break

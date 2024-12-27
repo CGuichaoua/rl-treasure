@@ -46,7 +46,7 @@ class BaseTreasureHuntEnv(gym.Env):
 
         if render_mode is not None and render_mode not in self.metadata["render_modes"]:
             raise ValueError(f"Unsupported render mode {render_mode}.")
-        self.render_mode = render_mode
+        self.render_mode = render_mode or "ansi"
 
         if self.render_mode == "human":
             pygame.init()

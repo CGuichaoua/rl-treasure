@@ -24,14 +24,6 @@ class TestBaseTreasureHuntEnv:
             warnings.simplefilter("error")
             check_env(environment.unwrapped, skip_render_check=True)
 
-    def test_initialization(self, environment):
-        """Test the initial state of the environment."""
-        obs, _ = environment.reset()
-        assert obs["hero_position"] == 0
-        assert obs["treasure_position"] == environment.observation_space["treasure_position"].n - 1
-        assert len(set(obs["monster_positions"]) & {
-                   obs["hero_position"], obs["treasure_position"]}) == 0
-
     def test_invalid_move_penalty(self, environment):
         """Test that invalid moves (out of bounds) return the correct penalty."""
         # Test moving out of bounds (hero at position 0, try to move up)
