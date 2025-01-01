@@ -1,0 +1,6 @@
+.venv
+.pytest_cache
+.vscode
+.notebooks
+results
+tests
