@@ -1,7 +1,6 @@
 """Utility functions for the treasure hunt project."""
 
 import os
-import pickle
 from datetime import datetime
 import time
 
@@ -15,7 +14,7 @@ class RLRunner:
 
     def __init__(self, agent, env, *,
                  total_epochs=10000, eval_interval=1000, eval_episodes=5, verbose=True,
-                 experiment_name=None, final_test_episodes=1000):
+                 experiment_name=None, final_test_episodes=1000, seed=None):
         self.agent = agent
         self.env = env
         self.total_epochs = total_epochs
@@ -23,6 +22,7 @@ class RLRunner:
         self.eval_episodes = eval_episodes
         self.final_test_episodes = final_test_episodes
         self.verbose = verbose
+        self.seed = seed
         if experiment_name is None:
             self.experiment_name = f"{agent.__class__.__name__}_{
                 env.__class__.__name__}"
@@ -32,10 +32,14 @@ class RLRunner:
         self.reward_history = []
         self.wallclock_history = []
         self.last_rewards = []
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        self.results_dir = os.path.join(
+            'results', self.experiment_name, timestamp)
 
     def train_agent(self):
         """Train the agent with regular evaluation loops."""
         total_epochs = self.total_epochs
+        self.env.reset(seed=self.seed)
         for epoch_no in range(total_epochs):
             self.train_agent_epoch()
             if self.verbose:
@@ -77,40 +81,40 @@ class RLRunner:
 
     def save_results(self):
         """Save the reward history and agent."""
-        # Get current timestamp
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-
         # Create results directory with timestamp subfolder if it doesn't exist
-        results_dir = os.path.join('results', self.experiment_name, timestamp)
-        os.makedirs(results_dir, exist_ok=True)
+        os.makedirs(self.results_dir, exist_ok=True)
 
-        # Save reward history
-        with open(os.path.join(results_dir, 'reward_history.pkl'), 'wb') as f:
-            pickle.dump(self.reward_history, f)
+        # Save reward history as CSV
+        np.savetxt(os.path.join(self.results_dir, 'reward_history.csv'),
+                   self.reward_history, delimiter=',')
 
-        # Save wallclock history
-        with open(os.path.join(results_dir, 'wallclock_history.pkl'), 'wb') as f:
-            pickle.dump(self.wallclock_history, f)
+        # Save wallclock history as CSV
+        np.savetxt(os.path.join(self.results_dir, 'wallclock_history.csv'),
+                   self.wallclock_history, delimiter=',')
 
-        # Save mean reward
-        with open(os.path.join(results_dir, 'mean_reward.txt'), 'w', encoding='utf8') as f:
+        # Save mean reward as text file
+        with open(os.path.join(self.results_dir, 'mean_reward.txt'), 'w', encoding='utf8') as f:
             f.write(str(self.reward_history[-1]))
 
-        # Save rewards
-        with open(os.path.join(results_dir, 'rewards.pkl'), 'wb') as f:
-            pickle.dump(self.last_rewards, f)
+        # Save rewards as CSV
+        np.savetxt(os.path.join(self.results_dir, 'rewards.csv'),
+                   self.last_rewards, delimiter=',')
 
         # Save agent
-        self.agent.save(os.path.join(results_dir, 'agent'))
+        self.agent.save(os.path.join(self.results_dir, 'agent'))
 
-        print(f"Results saved to the '{results_dir}' folder.")
+        print(f"Results saved to the '{self.results_dir}' folder.")
 
-    def plot_results(self):
+    def plot_results(self, save=False):
         """Plot reward history"""
         plt.plot(self.reward_history)
         plt.xlabel("Epochs")
         plt.ylabel("Mean Reward")
-        plt.title("Reward Progress Over Training")
+        plt.title(f"Reward Progress Over Training -- {self.experiment_name}")
+        if save:
+            os.makedirs(self.results_dir, exist_ok=True)
+            save_path = os.path.join(self.results_dir, "learning_rate.png")
+            plt.savefig(save_path)
         plt.show()
 
 
@@ -120,10 +124,11 @@ class AdaptiveRLRunner(RLRunner):
     def __init__(self, agent, env, *,
                  total_epochs=10000, eval_interval=1000, eval_episodes=5, verbose=True,
                  experiment_name=None, final_test_episodes=1000,
+                 seed=None,
                  target_std_ratio=.5, adapt_window=10):
         super().__init__(agent, env, total_epochs=total_epochs, eval_interval=eval_interval,
                          experiment_name=experiment_name, final_test_episodes=final_test_episodes,
-                         eval_episodes=eval_episodes, verbose=verbose)
+                         eval_episodes=eval_episodes, verbose=verbose, seed=seed)
         self.target_std_ratio = target_std_ratio
         self.adapt_window = adapt_window
 

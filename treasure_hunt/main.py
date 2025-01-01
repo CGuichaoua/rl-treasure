@@ -30,9 +30,21 @@ def make_agent(agent_name, env, load_model=None):
     elif agent_name == "DQN":
         env = FlattenTreasureWrapper(env)
         agent = DQN("MlpPolicy", env)
+    elif agent_name == "DQN-smaller":
+        env = FlattenTreasureWrapper(env)
+        agent = DQN("MlpPolicy", env, policy_kwargs={"net_arch": [64, 64]})
+    elif agent_name == "DQN-larger":
+        env = FlattenTreasureWrapper(env)
+        agent = DQN("MlpPolicy", env, policy_kwargs={"net_arch": [256, 256]})
     elif agent_name == "PPO":
         env = FlattenTreasureWrapper(env)
         agent = PPO("MlpPolicy", env)
+    elif agent_name == "PPO-smaller":
+        env = FlattenTreasureWrapper(env)
+        agent = PPO("MlpPolicy", env, policy_kwargs={"net_arch": [64, 64]})
+    elif agent_name == "PPO-larger":
+        env = FlattenTreasureWrapper(env)
+        agent = PPO("MlpPolicy", env, policy_kwargs={"net_arch": [256, 256]})
     else:
         raise ValueError(f"Unknown agent: {agent_name}")
 
@@ -43,7 +55,8 @@ def make_agent(agent_name, env, load_model=None):
     return agent, env
 
 
-VALID_AGENTS = ["tabular_q", "near_sighted", "oblivious", "DQN", "PPO"]
+VALID_AGENTS = ["tabular_q", "near_sighted",
+                "oblivious", "DQN", "DQN-smaller", "DQN-larger", "PPO", "PPO-smaller", "PPO-larger"]
 
 
 def main():
@@ -55,7 +68,7 @@ def main():
                         help="The agent to run. Can also be set via the TH_AGENT env variable.")
     parser.add_argument("--epochs", type=int, default=int(os.getenv("TH_EPOCHS", 1000)),
                         help="Number of epochs to train. Can also be set via TH_EPOCHS env variable.")
-    parser.add_argument("--timesteps", type=int, default=int(os.getenv("TH_TIMESTEPS", 1000)),
+    parser.add_argument("--timesteps", type=int, default=int(os.getenv("TH_TIMESTEPS", 10000)),
                         help="Number of timesteps to train each epoch. Can also be set via TH_TIMESTEPS env variable.")
     parser.add_argument("--render", action="store_true",
                         help="Render the environment. Use for debugging in non-Docker runs.")
@@ -63,17 +76,22 @@ def main():
                         help="Force a train run. Useful when loading a model.")
     parser.add_argument("--load_model", type=str, default=None,
                         help="Path to a pre-trained model to load.")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Random seed for reproducibility.")
     args = parser.parse_args()
 
     env_id = ENVIRONMENTS[args.environment]
-    env = make(env_id, render_mode="human" if args.render else None)
+    env = make(env_id, render_mode="human" if args.render else None,
+               max_episode_steps=500)
 
     agent, env = make_agent(args.agent, env, load_model=args.load_model)
 
     runner = AdaptiveRLRunner(agent, env,
                               total_epochs=args.epochs,
                               eval_interval=args.timesteps,
-                              experiment_name=f"{args.agent}_{args.environment}")
+                              experiment_name=f"{args.agent}_{
+                                  args.environment}",
+                              seed=args.seed)
     if args.load_model and not args.force_train:
         print("Loaded pre-trained model")
         if args.render:
@@ -91,7 +109,7 @@ def main():
             run_with_render(env, agent, n_episodes=10)
         runner.train_agent()
         runner.test_agent(final_test=True)
-        runner.plot_results()
+        runner.plot_results(save=True)
         runner.save_results()
 
     env.close()
