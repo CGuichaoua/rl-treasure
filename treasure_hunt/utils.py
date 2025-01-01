@@ -3,6 +3,7 @@
 import os
 import pickle
 from datetime import datetime
+import time
 
 import pygame
 import numpy as np
@@ -29,6 +30,7 @@ class RLRunner:
             self.experiment_name = experiment_name
 
         self.reward_history = []
+        self.wallclock_history = []
         self.last_rewards = []
 
     def train_agent(self):
@@ -46,8 +48,12 @@ class RLRunner:
 
     def train_agent_epoch(self):
         """Run an epoch of training."""
+        start_time = time.perf_counter()
         self.env.reset()
         self.agent.learn(total_timesteps=self.eval_interval)
+        end_time = time.perf_counter()
+        epoch_runtime = end_time - start_time
+        self.wallclock_history.append(epoch_runtime)
 
     def test_agent(self, final_test=False):
         """Test the agent's performance."""
@@ -82,6 +88,10 @@ class RLRunner:
         with open(os.path.join(results_dir, 'reward_history.pkl'), 'wb') as f:
             pickle.dump(self.reward_history, f)
 
+        # Save wallclock history
+        with open(os.path.join(results_dir, 'wallclock_history.pkl'), 'wb') as f:
+            pickle.dump(self.wallclock_history, f)
+
         # Save mean reward
         with open(os.path.join(results_dir, 'mean_reward.txt'), 'w', encoding='utf8') as f:
             f.write(str(self.reward_history[-1]))
@@ -109,8 +119,10 @@ class AdaptiveRLRunner(RLRunner):
 
     def __init__(self, agent, env, *,
                  total_epochs=10000, eval_interval=1000, eval_episodes=5, verbose=True,
+                 experiment_name=None, final_test_episodes=1000,
                  target_std_ratio=.5, adapt_window=10):
         super().__init__(agent, env, total_epochs=total_epochs, eval_interval=eval_interval,
+                         experiment_name=experiment_name, final_test_episodes=final_test_episodes,
                          eval_episodes=eval_episodes, verbose=verbose)
         self.target_std_ratio = target_std_ratio
         self.adapt_window = adapt_window
@@ -140,12 +152,12 @@ class AdaptiveRLRunner(RLRunner):
 def run_with_render(env_human, agent, n_episodes=10):
     """Run the agent in the environment with rendering."""
 
-    for episode_no in range(n_episodes):
-        obs, info = env_human.reset()  # Reset the environment if the episode ends
+    for _ in range(n_episodes):
+        obs, _ = env_human.reset()  # Reset the environment before each episode
         for _ in range(100):  # Add a limit
             # Get the action from the agent
             action, _ = agent.predict(obs, deterministic=False)
-            obs, reward, terminated, truncated, info = env_human.step(action)
+            obs, _, terminated, truncated, _ = env_human.step(action)
             env_human.render()  # Render the environment
             pygame.time.delay(100)  # Delay for 100 ms
             if terminated or truncated:
