@@ -78,6 +78,9 @@ def main():
                         help="Path to a pre-trained model to load.")
     parser.add_argument("--seed", type=int, default=None,
                         help="Random seed for reproducibility.")
+    parser.add_argument("--no-show", action="store_true",
+                        help="Do not show the plot (useful for batch run)")
+
     args = parser.parse_args()
 
     env_id = ENVIRONMENTS[args.environment]
@@ -109,7 +112,8 @@ def main():
             run_with_render(env, agent, n_episodes=10)
         runner.train_agent()
         runner.test_agent(final_test=True)
-        runner.plot_results(save=True)
+        if not args.no_show:
+            runner.plot_results(save=True)
         runner.save_results()
 
     env.close()
