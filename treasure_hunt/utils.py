@@ -14,7 +14,7 @@ class RLRunner:
 
     def __init__(self, agent, env, *,
                  total_epochs=10000, eval_interval=1000, eval_episodes=5, verbose=True,
-                 experiment_name=None, final_test_episodes=1000, seed=None):
+                 experiment_name=None, final_test_episodes=1000, seed=None, max_walltime=1800):
         self.agent = agent
         self.env = env
         self.total_epochs = total_epochs
@@ -23,6 +23,7 @@ class RLRunner:
         self.final_test_episodes = final_test_episodes
         self.verbose = verbose
         self.seed = seed
+        self.max_walltime = max_walltime
         if experiment_name is None:
             self.experiment_name = f"{agent.__class__.__name__}_{
                 env.__class__.__name__}"
@@ -39,6 +40,7 @@ class RLRunner:
     def train_agent(self):
         """Train the agent with regular evaluation loops."""
         total_epochs = self.total_epochs
+        start_time = time.perf_counter()
         self.env.reset(seed=self.seed)
         for epoch_no in range(total_epochs):
             self.train_agent_epoch()
@@ -49,6 +51,9 @@ class RLRunner:
             if self.verbose:
                 print(f"Epoch {epoch_no +
                                1}/{total_epochs} - Mean reward: {self.reward_history[-1]}")
+            if time.perf_counter() - start_time > self.max_walltime:
+                print("Truncating due to exceeding time budget.")
+                return
 
     def train_agent_epoch(self):
         """Run an epoch of training."""
@@ -124,13 +129,14 @@ class AdaptiveRLRunner(RLRunner):
     def __init__(self, agent, env, *,
                  total_epochs=10000, eval_interval=1000, eval_episodes=5, verbose=True,
                  experiment_name=None, final_test_episodes=1000,
-                 seed=None,
-                 target_std_ratio=.5, adapt_window=10):
+                 seed=None, max_walltime=1800,
+                 target_std_ratio=.5, adapt_window=10, max_eval_episodes=30):
         super().__init__(agent, env, total_epochs=total_epochs, eval_interval=eval_interval,
                          experiment_name=experiment_name, final_test_episodes=final_test_episodes,
-                         eval_episodes=eval_episodes, verbose=verbose, seed=seed)
+                         eval_episodes=eval_episodes, verbose=verbose, seed=seed, max_walltime=max_walltime)
         self.target_std_ratio = target_std_ratio
         self.adapt_window = adapt_window
+        self.max_eval_episodes = max_eval_episodes
 
     def test_agent(self, final_test=False):
         """Train the agent with adaptive evaluation intervals."""
@@ -144,8 +150,10 @@ class AdaptiveRLRunner(RLRunner):
             return
         std_inner = np.std(self.last_rewards)
         std_inter = np.std(self.reward_history[-self.adapt_window:])
+        if std_inter == 0:
+            return
         std_ratio = std_inter / std_inner
-        if std_ratio > self.target_std_ratio:
+        if std_ratio > self.target_std_ratio and self.eval_episodes < self.max_eval_episodes:
             self.eval_episodes += int(np.ceil(self.eval_episodes * 0.1))
         elif self.eval_episodes > 2 and std_ratio < self.target_std_ratio * 0.5:
             self.eval_episodes -= int(np.ceil(self.eval_episodes * 0.1))
